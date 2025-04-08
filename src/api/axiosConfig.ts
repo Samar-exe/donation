@@ -1,20 +1,31 @@
 import axios from 'axios';
 
+// Log the API URL being used for debugging
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+console.log('Using API URL:', apiUrl);
+
 const instance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: apiUrl,
   headers: {
     'Content-Type': 'application/json',
   },
   withCredentials: true // Include cookies with requests
 });
 
-// Add a request interceptor
+// Add a request interceptor to include API prefix if needed
 instance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Make sure URL starts with /api if it's not an absolute URL
+    if (config.url && !config.url.startsWith('http') && !config.url.startsWith('/api')) {
+      config.url = `/api${config.url}`;
+    }
+    
+    console.log(`Making ${config.method?.toUpperCase()} request to: ${config.baseURL}${config.url}`);
     return config;
   },
   (error) => {

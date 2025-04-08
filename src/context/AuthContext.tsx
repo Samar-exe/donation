@@ -163,7 +163,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       console.log('Sending Google credential to backend (first 20 chars):', credential.substring(0, 20) + '...');
       
-      const response = await axios.post('/auth/google', {
+      // Use the full API URL to avoid any path issues
+      const response = await axios.post('/api/auth/google', {
         idToken: credential
       });
       
