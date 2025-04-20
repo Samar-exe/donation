@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
+import { GoogleLogin } from '@react-oauth/google';
+import { Fuel as Mosque } from 'lucide-react';
 
 const RegisterPage: React.FC = () => {
   const [name, setName] = useState('');
@@ -17,25 +18,17 @@ const RegisterPage: React.FC = () => {
   }>({});
   const [success, setSuccess] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { register, loading, error, clearError } = useAuth();
+  const { register, loading, error, clearError, googleLogin } = useAuth();
   
   // Collection of hadiths and Quran verses about goodwill and charity
   const verses = [
-    "The Prophet Muhammad (peace be upon him) said: \"Charity does not decrease wealth, no one forgives another except that Allah increases his honor, and no one humbles himself for the sake of Allah except that Allah raises his status.\" (Muslim)",
+    "The Prophet said: \"Give charity without delay, for it stands in the way of calamity.\" (Tirmidhi)",
     
     "And whatever you spend in good, it will be repaid to you in full, and you shall not be wronged. (Quran 2:272)",
     
     "The Prophet said: \"The upper hand is better than the lower hand. The upper hand is the one that gives, and the lower hand is the one that takes.\" (Bukhari and Muslim)",
     
-    "Those who spend their wealth in charity day and night, secretly and openly—their reward is with their Lord. And there will be no fear for them, nor will they grieve. (Quran 2:274)",
-    
-    "The Prophet said: \"Give charity without delay, for it stands in the way of calamity.\" (Tirmidhi)",
-    
-    "Who is he that will lend to Allah a beautiful loan which Allah will double unto his credit and multiply it many times? (Quran 2:245)",
-    
-    "The Prophet said: \"Save yourself from hellfire by giving even half a date in charity.\" (Bukhari)",
-    
-    "By no means shall you attain righteousness unless you give freely of that which you love. (Quran 3:92)"
+    "Those who spend their wealth in charity day and night, secretly and openly—their reward is with their Lord. And there will be no fear for them, nor will they grieve. (Quran 2:274)"
   ];
 
   // Change verse every 10 seconds
@@ -128,169 +121,172 @@ const RegisterPage: React.FC = () => {
     }
   };
 
-  const handleGoogleSignUp = () => {
-    // Google sign up logic is handled by the login page
-    navigate('/login');
-  };
-
-  const handleFacebookSignUp = () => {
-    // Facebook sign up logic would go here
-    console.log('Sign up with Facebook clicked');
-  };
-
   return (
-    <div className="min-h-screen bg-blue-100 flex">
-      <div className="w-full flex flex-col md:flex-row max-w-7xl mx-auto">
-        {/* Left side - Verses and Info */}
-        <div className="w-full md:w-1/2 flex items-center justify-center p-8 md:p-12">
-          <div className="max-w-md">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-              Our donation app helps you connect and share with those in need in your community.
-            </h2>
-            <div className="mt-6 bg-white p-6 rounded-lg shadow-md">
-              <p className="text-lg text-gray-700 italic">{currentVerse}</p>
-            </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+      {/* Left side - Background with quote */}
+      <div className="md:w-1/2 bg-emerald-50 flex flex-col items-center justify-center p-8 md:p-12">
+        <div className="max-w-md">
+          <div className="flex items-center mb-6">
+            <Mosque className="h-8 w-8 text-emerald-600" />
+            <span className="ml-2 text-xl font-bold text-emerald-800">IslamicHub</span>
+          </div>
+          
+          <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+            Our donation app helps you connect and share with those in need in your community.
+          </h2>
+          
+          <div className="mt-4 p-6 bg-white rounded-lg shadow-sm">
+            <p className="text-gray-700 italic">{currentVerse}</p>
           </div>
         </div>
-        
-        {/* Right side - Sign Up Form */}
-        <div className="w-full md:w-1/2 bg-white p-8 md:p-12 shadow-lg">
-          <h1 className="text-3xl font-bold mb-8 text-center text-gray-800">Create an account</h1>
-          <p className="mb-6 text-center text-gray-600">Join our community of donors</p>
-          
-          {error && (
-            <div className="mb-4 bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-              <span className="block sm:inline">{error}</span>
-            </div>
-          )}
-          
-          {success && (
-            <div className="mb-4 bg-green-50 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
-              <span className="block sm:inline">{success}</span>
-            </div>
-          )}
-          
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                Full Name *
-              </label>
-              <input
-                id="name"
-                type="text"
-                placeholder="Enter your full name"
-                className={`w-full px-4 py-2 border ${formErrors.name ? 'border-red-500' : 'border-gray-300'} rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors`}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-              {formErrors.name && (
-                <p className="mt-1 text-sm text-red-600">{formErrors.name}</p>
-              )}
-            </div>
+      </div>
+      
+      {/* Right side - Sign Up Form */}
+      <div className="md:w-1/2 flex justify-center items-center p-8">
+        <div className="max-w-md w-full">
+          <div className="bg-white p-8 rounded-lg shadow-sm">
+            <h1 className="text-2xl font-semibold mb-2 text-center text-gray-800">Create an Account</h1>
+            <p className="mb-6 text-center text-gray-500 text-sm">Join our community of donors</p>
             
-            <div className="mb-4">
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email address *
-              </label>
-              <input
-                id="email"
-                type="email"
-                placeholder="Enter your email address"
-                className={`w-full px-4 py-2 border ${formErrors.email ? 'border-red-500' : 'border-gray-300'} rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors`}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-              {formErrors.email && (
-                <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
-              )}
-            </div>
+            {error && (
+              <div className="mb-4 p-3 bg-red-100 text-red-700 border border-red-400 rounded">
+                {error}
+              </div>
+            )}
             
-            <div className="mb-4">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password *
-              </label>
-              <input
-                id="password"
-                type="password"
-                placeholder="Create a password (min. 6 characters)"
-                className={`w-full px-4 py-2 border ${formErrors.password ? 'border-red-500' : 'border-gray-300'} rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors`}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              {formErrors.password && (
-                <p className="mt-1 text-sm text-red-600">{formErrors.password}</p>
-              )}
-            </div>
+            {success && (
+              <div className="mb-4 p-3 bg-green-100 text-green-700 border border-green-400 rounded">
+                {success}
+              </div>
+            )}
             
-            <div className="mb-6">
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                Confirm password *
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                placeholder="Confirm your password"
-                className={`w-full px-4 py-2 border ${formErrors.confirmPassword ? 'border-red-500' : 'border-gray-300'} rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors`}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-              {formErrors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600">{formErrors.confirmPassword}</p>
-              )}
-            </div>
-            
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-green-600 text-white font-bold py-2 px-4 rounded hover:bg-green-700 transition duration-200 disabled:opacity-50"
-            >
-              {loading ? 'Creating account...' : 'Sign Up'}
-            </button>
-          </form>
-          
-          <div className="mt-6">
-            <div className="relative flex items-center">
-              <div className="flex-grow border-t border-gray-300"></div>
-              <span className="flex-shrink mx-4 text-gray-600">or</span>
-              <div className="flex-grow border-t border-gray-300"></div>
-            </div>
-            
-            <div className="mt-6 space-y-4">
-              <button
-                onClick={handleGoogleSignUp}
-                className="w-full flex items-center justify-center bg-white border border-gray-300 rounded px-4 py-2 hover:bg-gray-50 transition duration-200"
-              >
-                <img 
-                  src="https://www.svgrepo.com/show/475656/google-color.svg" 
-                  alt="Google logo" 
-                  className="w-6 h-6 mr-2"
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="name" className="block text-sm text-gray-600 mb-1">
+                  Full Name
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  placeholder="Enter your full name"
+                  className={`w-full px-4 py-2 border ${formErrors.name ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500`}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
                 />
-                <span>Sign up with Google</span>
-              </button>
+                {formErrors.name && (
+                  <p className="mt-1 text-xs text-red-600">{formErrors.name}</p>
+                )}
+              </div>
+              
+              <div>
+                <label htmlFor="email" className="block text-sm text-gray-600 mb-1">
+                  Email address
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email address"
+                  className={`w-full px-4 py-2 border ${formErrors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500`}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+                {formErrors.email && (
+                  <p className="mt-1 text-xs text-red-600">{formErrors.email}</p>
+                )}
+              </div>
+              
+              <div>
+                <label htmlFor="password" className="block text-sm text-gray-600 mb-1">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  placeholder="Create a password (min. 6 characters)"
+                  className={`w-full px-4 py-2 border ${formErrors.password ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500`}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                {formErrors.password && (
+                  <p className="mt-1 text-xs text-red-600">{formErrors.password}</p>
+                )}
+              </div>
+              
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm text-gray-600 mb-1">
+                  Confirm password
+                </label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="Confirm your password"
+                  className={`w-full px-4 py-2 border ${formErrors.confirmPassword ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500`}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+                {formErrors.confirmPassword && (
+                  <p className="mt-1 text-xs text-red-600">{formErrors.confirmPassword}</p>
+                )}
+              </div>
               
               <button
-                onClick={handleFacebookSignUp}
-                className="w-full flex items-center justify-center bg-blue-600 text-white rounded px-4 py-2 hover:bg-blue-700 transition duration-200"
+                type="submit"
+                disabled={loading}
+                className="w-full bg-emerald-600 text-white py-2 px-4 rounded-lg hover:bg-emerald-700 transition duration-200 font-medium disabled:opacity-70"
               >
-                <svg className="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                {loading ? 'Creating account...' : 'Sign Up'}
+              </button>
+            </form>
+            
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-500">or</p>
+            </div>
+            
+            <div className="mt-4">
+              <div className="w-full flex justify-center">
+                <GoogleLogin
+                  onSuccess={async (credentialResponse) => {
+                    try {
+                      if (credentialResponse.credential) {
+                        await googleLogin(credentialResponse.credential);
+                        navigate('/');
+                      } else {
+                        console.error('No credential received from Google');
+                      }
+                    } catch (err) {
+                      // Error is handled by the AuthContext
+                    }
+                  }}
+                  onError={() => {
+                    console.error('Google Login Failed');
+                  }}
+                  useOneTap
+                />
+              </div>
+              
+              <button
+                type="button"
+                className="w-full mt-4 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200 flex items-center justify-center"
+              >
+                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z" />
                 </svg>
-                <span>Sign up with Facebook</span>
+                Continue with Facebook
               </button>
             </div>
-          </div>
-          
-          <div className="mt-8 text-center">
-            <p className="text-gray-600">
-              Already have an account?{' '}
-              <Link to="/login" className="text-green-600 hover:underline">
-                Log In
-              </Link>
-            </p>
+            
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-600">
+                Already have an account?{' '}
+                <Link to="/login" className="text-emerald-600 font-medium hover:underline">
+                  Login
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </div>
