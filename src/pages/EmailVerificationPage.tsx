@@ -1,32 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import axios from '../api/axiosConfig';
-import { AxiosError } from 'axios';
-
-interface VerificationResponse {
-  _id: string;
-  email: string;
-  isVerified: boolean;
-  token: string;
-  message: string;
-}
 
 const EmailVerificationPage: React.FC = () => {
   const [verificationStatus, setVerificationStatus] = useState<'verifying' | 'success' | 'failed'>('verifying');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const location = useLocation();
   const navigate = useNavigate();
-  const { loginWithToken } = useAuth();
+  const { verifyEmail, user } = useAuth();
 
   useEffect(() => {
-    const verifyEmail = async () => {
+    const performVerification = async () => {
       try {
-        // Extract token from URL query parameters
+        // Extract token and referral code from URL query parameters
         const queryParams = new URLSearchParams(location.search);
         const token = queryParams.get('token');
+        const referralCode = queryParams.get('ref'); // Get referral code if present
         
         console.log('Verification token from URL:', token);
+        if (referralCode) {
+          console.log('Referral code from URL:', referralCode);
+        }
 
         if (!token) {
           console.error('No token found in URL');
@@ -35,41 +29,23 @@ const EmailVerificationPage: React.FC = () => {
           return;
         }
 
-        // Send verification request to the backend
-        const response = await axios.get<VerificationResponse>(`/auth/verify-email/${token}`);
-        console.log('Verification response:', response.data);
-
-        // If verification successful
-        if (response.data.token) {
-          setVerificationStatus('success');
-          
-          // Automatically log in the user
-          loginWithToken(response.data.token, response.data);
-
-          // Redirect to home page after 3 seconds
-          setTimeout(() => {
-            navigate('/');
-          }, 3000);
-        } else {
-          setVerificationStatus('failed');
-          setErrorMessage('Email verification failed. Please try again or contact support.');
-        }
+        // Use the context function to verify email with referral code
+        await verifyEmail(token, referralCode || undefined);
+        setVerificationStatus('success');
+        
+        // Redirect to home page after 3 seconds
+        setTimeout(() => {
+          navigate('/');
+        }, 3000);
       } catch (error) {
         console.error('Email verification error:', error);
         setVerificationStatus('failed');
-        
-        const axiosError = error as AxiosError<{message: string}>;
-        if (axiosError.response) {
-          console.error('Server response:', axiosError.response.data);
-          setErrorMessage((axiosError.response.data as any).message || 'Verification failed. Please try again.');
-        } else {
-          setErrorMessage('An error occurred during verification. Please try again.');
-        }
+        setErrorMessage((error as Error).message || 'Verification failed. Please try again.');
       }
     };
 
-    verifyEmail();
-  }, [location, navigate, loginWithToken]);
+    performVerification();
+  }, [location, navigate, verifyEmail]);
 
   // Render verification status UI
   return (

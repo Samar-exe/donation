@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { GoogleLogin } from '@react-oauth/google';
 import { Fuel as Mosque } from 'lucide-react';
@@ -17,7 +17,9 @@ const RegisterPage: React.FC = () => {
     confirmPassword?: string;
   }>({});
   const [success, setSuccess] = useState<string | null>(null);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { register, loading, error, clearError, googleLogin } = useAuth();
   
   // Collection of hadiths and Quran verses about goodwill and charity
@@ -30,6 +32,15 @@ const RegisterPage: React.FC = () => {
     
     "Those who spend their wealth in charity day and night, secretly and openly—their reward is with their Lord. And there will be no fear for them, nor will they grieve. (Quran 2:274)"
   ];
+
+  // Extract referral code from URL if present
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const ref = searchParams.get('ref');
+    if (ref) {
+      setReferralCode(ref);
+    }
+  }, [location]);
 
   // Change verse every 10 seconds
   useEffect(() => {
@@ -102,8 +113,15 @@ const RegisterPage: React.FC = () => {
     }
     
     try {
-      await register(name, email, password);
-      setSuccess('Registration successful! Please check your email to verify your account.');
+      await register(name, email, password, referralCode || undefined);
+      
+      // If there was a referral code, mention it in the success message
+      if (referralCode) {
+        const successMessage = 'Registration successful! Please check your email to verify your account. Your referral code will be applied after verification.';
+        setSuccess(successMessage);
+      } else {
+        setSuccess('Registration successful! Please check your email to verify your account.');
+      }
       
       // Clear form fields
       setName('');

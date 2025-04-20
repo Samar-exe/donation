@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   History, 
@@ -6,9 +6,13 @@ import {
   UserCog, 
   Edit3,
   Clock,
-  LayoutDashboard
+  LayoutDashboard,
+  Share2,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import * as referralService from '../api/referralService';
 
 const ProfilePage = () => {
   const [activeTab, setActiveTab] = useState('history');
@@ -20,14 +24,102 @@ const ProfilePage = () => {
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [validationError, setValidationError] = useState('');
   
+  // Referral state
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [referralCount, setReferralCount] = useState(0);
+  const [sawabPoints, setSawabPoints] = useState(0);
+  const [referralCopied, setReferralCopied] = useState(false);
+  const [referralCodeInput, setReferralCodeInput] = useState('');
+  const [referralStatus, setReferralStatus] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'none';
+  }>({ message: '', type: 'none' });
+  const [showReferralModal, setShowReferralModal] = useState(false);
+  
   // Update form values when user data changes
   useEffect(() => {
     if (user) {
       setName(user.name || '');
       setEmail(user.email || '');
+      // Initialize sawab points from user data
+      setSawabPoints(user.sawabPoints || 0);
     }
   }, [user]);
   
+  // Fetch referral info
+  const fetchReferralInfo = useCallback(async () => {
+    try {
+      const info = await referralService.getReferralInfo();
+      setReferralCode(info.referralCode);
+      setReferralCount(info.referralCount);
+      setSawabPoints(info.sawabPoints);
+    } catch (err) {
+      console.error('Failed to fetch referral info:', err);
+    }
+  }, []);
+  
+  useEffect(() => {
+    if (user) {
+      fetchReferralInfo();
+    }
+  }, [user, fetchReferralInfo]);
+
+  // Copy referral link to clipboard
+  const copyReferralLink = async () => {
+    try {
+      const referralLink = `${window.location.origin}/register?ref=${referralCode}`;
+      await navigator.clipboard.writeText(referralLink);
+      setReferralCopied(true);
+      
+      // Record the share action to get sawab points
+      try {
+        const response = await referralService.shareReferralLink();
+        setSawabPoints(response.sawabPoints);
+      } catch (err) {
+        console.error('Failed to record share action:', err);
+      }
+      
+      // Reset the copied status after 3 seconds
+      setTimeout(() => {
+        setReferralCopied(false);
+      }, 3000);
+    } catch (err) {
+      console.error('Failed to copy referral link:', err);
+    }
+  };
+  
+  // Apply a referral code
+  const applyReferralCode = async () => {
+    if (!referralCodeInput) {
+      setReferralStatus({
+        type: 'error',
+        message: 'Please enter a referral code'
+      });
+      return;
+    }
+    
+    try {
+      const response = await referralService.applyReferralCode(referralCodeInput);
+      setReferralStatus({
+        type: 'success',
+        message: response.message
+      });
+      setSawabPoints(response.sawabPoints);
+      setReferralCodeInput('');
+      
+      // Close the modal after success
+      setTimeout(() => {
+        setShowReferralModal(false);
+        setReferralStatus({ message: '', type: 'none' });
+      }, 2000);
+    } catch (err: any) {
+      setReferralStatus({
+        type: 'error',
+        message: err.response?.data?.message || 'Failed to apply referral code'
+      });
+    }
+  };
+
   const defaultUser = {
     name: 'John Doe',
     email: 'john.doe@example.com',
@@ -42,7 +134,7 @@ const ProfilePage = () => {
     email: user?.email || defaultUser.email,
     avatar: user?.profilePicture || defaultUser.avatar,
     lastDonation: defaultUser.lastDonation,
-    sawabPoints: defaultUser.sawabPoints,
+    sawabPoints: sawabPoints || defaultUser.sawabPoints,
   };
 
   const validateForm = () => {
@@ -234,6 +326,43 @@ const ProfilePage = () => {
                 <div className="mt-4 py-2 px-4 bg-emerald-50 rounded-lg">
                   <p className="text-sm text-emerald-800">Sawab Points</p>
                   <p className="text-2xl font-bold text-emerald-600">{userData.sawabPoints}</p>
+                  
+                  {/* Referral Button */}
+                  <button
+                    onClick={copyReferralLink}
+                    className={`mt-3 text-sm flex items-center justify-center w-full py-1.5 px-3 rounded-lg transition-colors ${
+                      referralCopied 
+                        ? 'bg-emerald-200 text-emerald-800' 
+                        : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                    }`}
+                    disabled={referralCopied}
+                  >
+                    {referralCopied ? (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="w-4 h-4 mr-1" />
+                        Share Referral Link
+                      </>
+                    )}
+                  </button>
+                  
+                  {/* Use Referral Code Button */}
+                  <button
+                    onClick={() => setShowReferralModal(true)}
+                    className="mt-2 text-sm flex items-center justify-center w-full py-1.5 px-3 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 transition-colors"
+                  >
+                    Use a Referral Code
+                  </button>
+                  
+                  {referralCount > 0 && (
+                    <p className="mt-2 text-xs text-emerald-700">
+                      {referralCount} {referralCount === 1 ? 'person' : 'people'} used your referral code
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -290,6 +419,66 @@ const ProfilePage = () => {
           </div>
         </div>
       </div>
+      
+      {/* Referral Code Modal */}
+      {showReferralModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold mb-4">Use a Referral Code</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Enter someone's referral code to get 2 Sawab points! They will receive 5 Sawab points when you use their code.
+            </p>
+            
+            <div className="mb-4">
+              <input
+                type="text"
+                value={referralCodeInput}
+                onChange={(e) => setReferralCodeInput(e.target.value)}
+                placeholder="Enter referral code"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              />
+            </div>
+            
+            {referralStatus.type !== 'none' && (
+              <div 
+                className={`mb-4 p-3 rounded ${
+                  referralStatus.type === 'success' 
+                    ? 'bg-green-100 text-green-700' 
+                    : 'bg-red-100 text-red-700'
+                }`}
+              >
+                <div className="flex items-center">
+                  {referralStatus.type === 'success' ? (
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 mr-2" />
+                  )}
+                  {referralStatus.message}
+                </div>
+              </div>
+            )}
+            
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setShowReferralModal(false);
+                  setReferralStatus({ message: '', type: 'none' });
+                  setReferralCodeInput('');
+                }}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={applyReferralCode}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+              >
+                Apply Code
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

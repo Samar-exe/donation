@@ -8,6 +8,8 @@ interface User {
   name?: string;
   profilePicture?: string;
   isVerified: boolean;
+  sawabPoints?: number;
+  referralCode?: string;
 }
 
 interface AuthContextType {
@@ -16,10 +18,10 @@ interface AuthContextType {
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   loginWithToken: (token: string, userData: any) => void;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, referralCode?: string) => Promise<void>;
   googleLogin: (credential: string) => Promise<void>;
   logout: () => void;
-  verifyEmail: (token: string) => Promise<void>;
+  verifyEmail: (token: string, referralCode?: string) => Promise<void>;
   updateProfile: (userData: Partial<User>) => Promise<void>;
   clearError: () => void;
 }
@@ -69,7 +71,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             email: userData.email,
             name: userData.name,
             profilePicture: userData.profilePicture,
-            isVerified: userData.isVerified
+            isVerified: userData.isVerified,
+            sawabPoints: userData.sawabPoints,
+            referralCode: userData.referralCode
           });
           localStorage.setItem('user', JSON.stringify(userData));
         } catch (error) {
@@ -90,11 +94,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   // Register function
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (name: string, email: string, password: string, referralCode?: string) => {
     try {
       setLoading(true);
       setError(null);
-      await axios.post('/api/auth/register', { name, email, password });
+      
+      // Add referral code to registration data if provided
+      const registrationData = { name, email, password };
+      if (referralCode) {
+        Object.assign(registrationData, { referralCode });
+      }
+      
+      await axios.post('/api/auth/register', registrationData);
       // Don't set user here - user needs to verify email first
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || 'Registration failed';
@@ -121,7 +132,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         email: userData.email,
         name: userData.name,
         profilePicture: userData.profilePicture,
-        isVerified: userData.isVerified
+        isVerified: userData.isVerified,
+        sawabPoints: userData.sawabPoints,
+        referralCode: userData.referralCode
       });
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || 'Login failed';
@@ -146,7 +159,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         email: userData.email,
         name: userData.name,
         profilePicture: userData.profilePicture,
-        isVerified: userData.isVerified || true
+        isVerified: userData.isVerified || true,
+        sawabPoints: userData.sawabPoints || 0,
+        referralCode: userData.referralCode
       });
     } catch (err: any) {
       console.error('Error logging in with token', err);
@@ -196,18 +211,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Verify email function
-  const verifyEmail = async (token: string) => {
+  const verifyEmail = async (token: string, referralCode?: string) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`/api/auth/verify-email/${token}`);
-      const { token: authToken, _id, email, name, isVerified } = response.data;
+      
+      // Build the verification URL with referral code if present
+      let verificationUrl = `/api/auth/verify-email/${token}`;
+      if (referralCode) {
+        verificationUrl += `?referralCode=${referralCode}`;
+      }
+      
+      const response = await axios.get(verificationUrl);
+      const { token: authToken, _id, email, name, isVerified, sawabPoints } = response.data;
       
       const userData = { 
         id: _id, 
         email, 
         name,
-        isVerified 
+        isVerified,
+        sawabPoints
       };
       
       localStorage.setItem('token', authToken);
