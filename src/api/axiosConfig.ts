@@ -20,10 +20,13 @@ instance.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Make sure URL starts with /api if it's not an absolute URL
+    // No need to add /api prefix since we're now consistently using it in all API calls
+    // This avoids any double-prefixing issues
+    /*
     if (config.url && !config.url.startsWith('http') && !config.url.startsWith('/api')) {
       config.url = `/api${config.url}`;
     }
+    */
     
     console.log(`Making ${config.method?.toUpperCase()} request to: ${config.baseURL}${config.url}`);
     return config;

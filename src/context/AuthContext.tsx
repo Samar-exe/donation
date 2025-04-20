@@ -20,6 +20,7 @@ interface AuthContextType {
   googleLogin: (credential: string) => Promise<void>;
   logout: () => void;
   verifyEmail: (token: string) => Promise<void>;
+  updateProfile: (userData: Partial<User>) => Promise<void>;
   clearError: () => void;
 }
 
@@ -61,7 +62,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (token) {
         try {
           setLoading(true);
-          const response = await axios.get('/auth/me');
+          const response = await axios.get('/api/auth/me');
           const userData = response.data;
           setUser({
             id: userData._id,
@@ -93,7 +94,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setLoading(true);
       setError(null);
-      await axios.post('/auth/register', { name, email, password });
+      await axios.post('/api/auth/register', { name, email, password });
       // Don't set user here - user needs to verify email first
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || 'Registration failed';
@@ -109,7 +110,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.post('/auth/login', { email, password });
+      const response = await axios.post('/api/auth/login', { email, password });
       const { token, user: userData } = response.data;
       
       localStorage.setItem('token', token);
@@ -199,7 +200,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`/auth/verify-email/${token}`);
+      const response = await axios.get(`/api/auth/verify-email/${token}`);
       const { token: authToken, _id, email, name, isVerified } = response.data;
       
       const userData = { 
@@ -215,6 +216,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(userData);
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || 'Email verification failed';
+      setError(errorMsg);
+      throw new Error(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update user profile
+  const updateProfile = async (userData: Partial<User>) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Use the full API path with /api prefix to match the pattern used for Google login
+      const response = await axios.put('/api/auth/profile', userData);
+      const updatedUser = response.data;
+      
+      // Update user in state and localStorage
+      if (user) {
+        const newUser = {
+          ...user,
+          ...updatedUser
+        };
+        
+        setUser(newUser);
+        localStorage.setItem('user', JSON.stringify(newUser));
+      }
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || 'Failed to update profile';
       setError(errorMsg);
       throw new Error(errorMsg);
     } finally {
@@ -238,6 +268,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     googleLogin,
     logout,
     verifyEmail,
+    updateProfile,
     clearError
   };
 
